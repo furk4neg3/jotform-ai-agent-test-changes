@@ -1,0 +1,194 @@
+from flask import Flask, request, jsonify
+from jotform_client import JotformAIAgentClient
+import openai
+import os
+import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Load env vars
+JOTFORM_SESSION = "6ccc1d27-7cec-7304-a449-7200770a"
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+gpt_client = openai.OpenAI(api_key=OPENAI_API_KEY)
+client = JotformAIAgentClient(
+    session_token=JOTFORM_SESSION
+)
+
+app = Flask(__name__, static_folder='static')
+
+
+def generate_test_prompt(title: str, data: str, mode: str) -> str:
+    """
+    Use GPT to create a single question to exercise the new knowledge or action.
+    mode: 'knowledge' | 'action' | 'persona'
+    """
+    system = {
+        'role': 'system',
+        'content': 'You are a helpful assistant that generates test prompts.'
+    }
+    if mode == 'knowledge':
+        user = {
+            'role': 'user',
+            'content': f"Generate a single question that tests the knowledge titled '{title}' with data: {data}"  
+        }
+    elif mode == 'action':
+        user = {
+            'role': 'user',
+            'content': f"Generate a single user message that would trigger the action for this action defined: {data}"  
+        }
+    elif mode == 'persona' and data is None:
+        user = {
+            'role': 'user',
+            'content': "Generate a casual question that reveals the agent's new persona."  
+        }
+    else:
+        user = {
+            'role': 'user',
+            'content': f"Tell me your greeting message in {data}"  
+        }
+
+    try:
+        resp = gpt_client.chat.completions.create(
+            model='gpt-4.1-mini', 
+            messages=[system, user], 
+            max_tokens=50
+        )
+        return resp.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Error generating prompt: {str(e)}"
+
+
+@app.route('/add_knowledge', methods=['POST'])
+def add_knowledge():
+    try:
+        payload = request.json
+        agent_id = payload.get('agent_id')
+        data = payload.get('data')
+        
+        if not agent_id or not data:
+            return jsonify({'error': 'Agent ID and data are required'}), 400
+
+        title = "Knowledge"
+
+        # 1) Add to agent
+        api_res = client.add_knowledge(agent_id, title, data)
+        title = api_res.get('content', {}).get('title', title)
+        
+        # 2) Generate test prompt
+        prompt = generate_test_prompt(title, data, mode='knowledge')
+
+        # 3) Preview in new chat
+        preview = client._preview_change(agent_id, prompt)
+
+        return jsonify({
+            'api_result': api_res,
+            'prompt': prompt,
+            'reply': preview
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/add_action', methods=['POST'])
+def add_action():
+    try:
+        # 1) Get inputs
+        payload = request.json
+        agent_id = payload.get('agent_id')
+        trigger_type = payload.get('trigger_type')
+        trigger_value = payload.get('trigger_value')
+        action_type = payload.get('action_type')
+        action_value = payload.get('action_value')
+        
+        if not all([agent_id, trigger_type, trigger_value, action_type, action_value]):
+            return jsonify({'error': 'All fields are required'}), 400
+
+        # 2) Create parameters from user defined values
+        if trigger_type == "talks-about":
+            agent_trigger = [{"type": "talks-about", "value": {"about": trigger_value}}]
+        elif trigger_type == "sentiment":
+            agent_trigger = [{"type": "sentiment", "value": {"sentiment": trigger_value}}]
+        elif trigger_type == "ask-about":
+            agent_trigger = [{"type": "ask-about", "value": {"about": trigger_value}}]
+        else:
+            return jsonify({'error': 'Invalid trigger type'}), 400
+        
+        if action_type == "talk-about":
+            agent_action = [{"type": "talk-about", "value": {"about": action_value}}]
+        elif action_type == "say-exact-message":
+            agent_action = [{"type": "say-exact-message", "value": {"message": action_value}}]
+        elif action_type == "collect-value":
+            agent_action = [{
+                "type": "collect-value",
+                "value": [{
+                    "field_name": {"value": action_value},
+                    "field_type": {"value": "control_textarea"}
+                }]
+            }]
+        else:
+            return jsonify({'error': 'Invalid action type'}), 400
+        
+        # 3) Add action to agent
+        api_res = client.add_action(
+            agent_id,
+            link="ANY",
+            status="ACTIVE",
+            action_type="BASIC",
+            order=2,
+            causes=agent_trigger,
+            tasks=agent_action,
+            channels=["all", "standalone", "chatbot", "phone", "voice", "messenger", "sms", "whatsapp"]
+        )
+
+        # use cause keyword values joined
+        gpt_prompt = json.dumps(agent_trigger) + json.dumps(agent_action)
+        prompt = generate_test_prompt('', gpt_prompt, mode='action')
+        preview = client._preview_change(agent_id, prompt)
+
+        return jsonify({
+            'api_result': api_res,
+            'prompt': prompt,
+            'reply': preview
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/update_persona', methods=['POST'])
+def update_persona():
+    try:
+        payload = request.json
+        agent_id = payload.get('agent_id')
+        update_prop = payload.get('update_prop')
+        update_value = payload.get('update_value')
+        
+        if not all([agent_id, update_prop, update_value]):
+            return jsonify({'error': 'All fields are required'}), 400
+        
+        update_prop_type = "agent"
+
+        api_res = client.update_property(agent_id, update_prop, update_value, update_prop_type)
+        if update_prop == "language":
+            prompt = f"Your greeting in your current default language"
+        else:
+            prompt = generate_test_prompt('', '', mode='persona')
+        preview = client._preview_change(agent_id, prompt)
+
+        return jsonify({
+            'api_result': api_res,
+            'prompt': prompt,
+            'reply': preview
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/')
+def serve_ui():
+    return app.send_static_file('index.html')
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)
