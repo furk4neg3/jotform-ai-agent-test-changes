@@ -151,14 +151,8 @@ class JotformAIAgentClient:
             # Fixed: using chat_resp instead of undefined create_resp
             chat_id = chat_resp["content"]["id"]
             
-            # 2) get the greeting message
-            greeting_mes = self.send_message(
-                agent_id,
-                chat_id,
-                "",
-                is_first_question=True
-            )
-            # 2) send your prompt
+            
+            # 2) send your prompt 
             msg_resp = self.send_message(
                 agent_id,
                 chat_id,
@@ -166,8 +160,7 @@ class JotformAIAgentClient:
                 is_first_question=False
             )
             # 3) pull out the agent's text reply
-            full_resp = {"greeting": greeting_mes, "agent": msg_resp}
-            return full_resp
+            return self.extract_message(msg_resp)
         except Exception as e:
             return f"Error in preview: {str(e)}"
 
