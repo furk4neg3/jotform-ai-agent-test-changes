@@ -141,41 +141,58 @@ class JotformAIAgentClient:
         agent_id: str,
         prompt: str,
         is_first_question: bool = True
-    ) -> Optional[str]:
+    ) -> Dict[str, Any]:
         """
         Preview changes by creating a chat and sending a prompt.
+        Returns a dictionary with 'greeting' and 'agent' response data.
         """
         try:
-            # 1) start a fresh chat
+            # 1) Start a fresh chat
             chat_resp = self.create_chat(agent_id)
-            # Fixed: using chat_resp instead of undefined create_resp
             chat_id = chat_resp["content"]["id"]
             
+            # 2) Get the greeting message
+            greeting_resp = self.send_message(
+                agent_id,
+                chat_id,
+                "",
+                is_first_question=True
+            )
             
-            # 2) send your prompt 
-            msg_resp = self.send_message(
+            # 3) Send the test prompt
+            agent_resp = self.send_message(
                 agent_id,
                 chat_id,
                 prompt,
                 is_first_question=False
             )
-            # 3) pull out the agent's text reply
-            return self.extract_message(msg_resp)
+            
+            # 4) Return both responses
+            return {
+                'greeting': greeting_resp,
+                'agent': agent_resp
+            }
         except Exception as e:
-            return f"Error in preview: {str(e)}"
+            return {'error': f"Error in preview: {str(e)}"}
 
     def extract_message(self, response: Dict[str, Any]) -> Optional[str]:
         """
         Extract the agent's reply text from a chat response dict.
         """
-        # new API format:
+        # Handle error case
+        if 'error' in response:
+            return response['error']
+            
+        # New API format:
         content = response.get("content")
         if isinstance(content, dict) and "message" in content:
             return content.get("message")
-        # fallback to tasks array
+        
+        # Fallback to tasks array
         for task in response.get("tasks", []):
             if task.get("type", "").startswith("say"):
                 return task["value"].get("message")
+        
         return None
 
     def _minimal_headers(self) -> Dict[str, str]:

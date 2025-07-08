@@ -46,12 +46,12 @@ def generate_test_prompt(title: str, data: str, mode: str) -> str:
     else:
         user = {
             'role': 'user',
-            'content': f"Tell me your greeting message in {data}"  
+            'content': f"Have a casual conversation in {data}"  
         }
 
     try:
         resp = gpt_client.chat.completions.create(
-            model='gpt-4.1-mini', 
+            model='gpt-4o-mini',  # Fixed: Use valid model name
             messages=[system, user], 
             max_tokens=50
         )
@@ -79,13 +79,31 @@ def add_knowledge():
         # 2) Generate test prompt
         prompt = generate_test_prompt(title, data, mode='knowledge')
 
-        # 3) Preview in new chat
+        # 3) Preview change
         preview = client._preview_change(agent_id, prompt)
+        
+        # Extract initial message and reply
+        initial_msg = None
+        reply_msg = None
+        
+        if isinstance(preview, dict) and 'greeting' in preview and 'agent' in preview:
+            # Extract greeting message
+            greeting_resp = preview['greeting']
+            if isinstance(greeting_resp, dict):
+                initial_msg = client.extract_message(greeting_resp)
+            
+            # Extract agent response
+            agent_resp = preview['agent']
+            if isinstance(agent_resp, dict):
+                reply_msg = client.extract_message(agent_resp)
+        elif isinstance(preview, str):
+            reply_msg = preview
 
         return jsonify({
+            'initial_message': initial_msg,
             'api_result': api_res,
             'prompt': prompt,
-            'reply': preview
+            'reply': reply_msg
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -145,12 +163,32 @@ def add_action():
         # use cause keyword values joined
         gpt_prompt = json.dumps(agent_trigger) + json.dumps(agent_action)
         prompt = generate_test_prompt('', gpt_prompt, mode='action')
+        
+        # 4) Preview change
         preview = client._preview_change(agent_id, prompt)
+        
+        # Extract initial message and reply
+        initial_msg = None
+        reply_msg = None
+        
+        if isinstance(preview, dict) and 'greeting' in preview and 'agent' in preview:
+            # Extract greeting message
+            greeting_resp = preview['greeting']
+            if isinstance(greeting_resp, dict):
+                initial_msg = client.extract_message(greeting_resp)
+            
+            # Extract agent response
+            agent_resp = preview['agent']
+            if isinstance(agent_resp, dict):
+                reply_msg = client.extract_message(agent_resp)
+        elif isinstance(preview, str):
+            reply_msg = preview
 
         return jsonify({
+            'initial_message': initial_msg,
             'api_result': api_res,
             'prompt': prompt,
-            'reply': preview
+            'reply': reply_msg
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -170,16 +208,37 @@ def update_persona():
         update_prop_type = "agent"
 
         api_res = client.update_property(agent_id, update_prop, update_value, update_prop_type)
+        
         if update_prop == "language":
-            prompt = f"Your greeting in your current default language"
+            prompt = prompt = generate_test_prompt('', update_value, mode='persona')
         else:
             prompt = generate_test_prompt('', '', mode='persona')
+        
+        # 3) Preview change
         preview = client._preview_change(agent_id, prompt)
+        
+        # Extract initial message and reply
+        initial_msg = None
+        reply_msg = None
+        
+        if isinstance(preview, dict) and 'greeting' in preview and 'agent' in preview:
+            # Extract greeting message
+            greeting_resp = preview['greeting']
+            if isinstance(greeting_resp, dict):
+                initial_msg = client.extract_message(greeting_resp)
+            
+            # Extract agent response
+            agent_resp = preview['agent']
+            if isinstance(agent_resp, dict):
+                reply_msg = client.extract_message(agent_resp)
+        elif isinstance(preview, str):
+            reply_msg = preview
 
         return jsonify({
+            'initial_message': initial_msg,
             'api_result': api_res,
             'prompt': prompt,
-            'reply': preview
+            'reply': reply_msg
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

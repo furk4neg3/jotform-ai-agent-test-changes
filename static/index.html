@@ -342,7 +342,6 @@
             </div>
         </div>
     </div>
-
     <script>
         // Persona value options
         const personaOptions = {
@@ -414,7 +413,7 @@
             document.getElementById('loading').classList.remove('show');
         }
 
-        // Show results
+        /// Show results
         function showResults(data) {
             const resultsContent = document.getElementById('results-content');
             resultsContent.innerHTML = '';
@@ -423,6 +422,10 @@
                 resultsContent.innerHTML = `<div class="error">${data.error}</div>`;
             } else {
                 const resultHTML = `
+                    <div class="result-item">
+                        <h4>Initial Greeting</h4>
+                        <p><strong>Greeting:</strong> ${data.initial_message || 'No greeting message'}</p>
+                    </div>
                     <div class="result-item">
                         <h4>Generated Test Prompt</h4>
                         <p><strong>Prompt:</strong> ${data.prompt || 'No prompt generated'}</p>
