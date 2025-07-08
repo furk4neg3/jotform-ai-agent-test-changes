@@ -342,6 +342,7 @@
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // Persona value options
         const personaOptions = {
@@ -421,26 +422,33 @@
             if (data.error) {
                 resultsContent.innerHTML = `<div class="error">${data.error}</div>`;
             } else {
-                const resultHTML = `
-                    <div class="result-item">
-                        <h4>Initial Greeting</h4>
-                        <p><strong>Greeting:</strong> ${data.initial_message || 'No greeting message'}</p>
-                    </div>
-                    <div class="result-item">
-                        <h4>Generated Test Prompt</h4>
-                        <p><strong>Prompt:</strong> ${data.prompt || 'No prompt generated'}</p>
-                    </div>
-                    <div class="result-item">
-                        <h4>Agent Response</h4>
-                        <p><strong>Reply:</strong> ${data.reply || 'No response received'}</p>
-                    </div>
-                    <div class="result-item">
-                        <h4>API Result</h4>
-                        <p><strong>Status:</strong> ${data.api_result?.responseCode || 'Unknown'}</p>
-                        <p><strong>Message:</strong> ${data.api_result?.message || 'No message'}</p>
-                    </div>
+                // Convert Markdown → HTML
+                const greetingHtml = marked.parse(data.initial_message || 'No greeting message');
+                const promptHtml   = marked.parse(data.prompt         || 'No prompt generated');
+                const replyHtml    = marked.parse(data.reply          || 'No response received');
+                const statusHtml   = `<p><strong>Status:</strong> ${data.api_result?.responseCode || 'Unknown'}</p>`;
+                const messageHtml  = `<p><strong>Message:</strong> ${marked.parse(data.api_result?.message || 'No message')}</p>`;
+
+                // Build the results HTML
+                resultsContent.innerHTML = `
+                <div class="result-item">
+                    <h4>Initial Greeting</h4>
+                    <div class="markdown-content">${greetingHtml}</div>
+                </div>
+                <div class="result-item">
+                    <h4>Generated Test Prompt</h4>
+                    <div class="markdown-content">${promptHtml}</div>
+                </div>
+                <div class="result-item">
+                    <h4>Agent Response</h4>
+                    <div class="markdown-content">${replyHtml}</div>
+                </div>
+                <div class="result-item">
+                    <h4>API Result</h4>
+                    ${statusHtml}
+                    ${messageHtml}
+                </div>
                 `;
-                resultsContent.innerHTML = resultHTML;
             }
 
             document.getElementById('results').style.display = 'block';

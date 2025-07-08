@@ -26,7 +26,7 @@ def generate_test_prompt(title: str, data: str, mode: str) -> str:
     """
     system = {
         'role': 'system',
-        'content': 'You are a helpful assistant that generates test prompts.'
+        'content': 'You are a helpful assistant that generates test prompts. You act as a chatbot user, so act like a user at all times.'
     }
     if mode == 'knowledge':
         user = {
@@ -41,12 +41,12 @@ def generate_test_prompt(title: str, data: str, mode: str) -> str:
     elif mode == 'persona' and data is None:
         user = {
             'role': 'user',
-            'content': "Generate a casual question that reveals the agent's new persona."  
+            'content': "Have a casual conversation. ACT AS A CHATBOT USER, NOT AS A CHATBOT. IMMEDIATELY START ACTING DONT SAY THINGS LIKE -SURE- OR ANYTHING."  
         }
     else:
         user = {
             'role': 'user',
-            'content': f"Have a casual conversation in {data}"  
+            'content': f"Have a casual conversation in {data}. ACT AS A CHATBOT USER, NOT AS A CHATBOT. IMMEDIATELY START ACTING DONT SAY THINGS LIKE -SURE- OR ANYTHING."  
         }
 
     try:
@@ -161,7 +161,7 @@ def add_action():
         )
 
         # use cause keyword values joined
-        gpt_prompt = json.dumps(agent_trigger) + json.dumps(agent_action)
+        gpt_prompt = json.dumps(agent_trigger)
         prompt = generate_test_prompt('', gpt_prompt, mode='action')
         
         # 4) Preview change
