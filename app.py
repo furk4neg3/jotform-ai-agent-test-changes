@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Load env vars
-JOTFORM_SESSION = "6ccc1d27-7cec-7304-a449-7200770a"
+JOTFORM_SESSION = os.getenv('JOTFORM_SESSION')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 gpt_client = openai.OpenAI(api_key=OPENAI_API_KEY)
