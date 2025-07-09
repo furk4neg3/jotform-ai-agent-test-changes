@@ -12,8 +12,8 @@ class JotformAIAgentClient:
     """
     BASE_URL = "https://www.jotform.com/API/ai-agent-builder/agents"
     CHAT_URL = "https://agent.jotform.com/API/ai-agent"
-    DEFAULT_ORIGIN = "https://agent.jotform.com"
     DEFAULT_REFERER = "https://agent.jotform.com"
+    DEFAULT_ORIGIN  = "https://www.jotform.com"
 
     def __init__(
         self,
@@ -174,6 +174,38 @@ class JotformAIAgentClient:
             }
         except Exception as e:
             return {'error': f"Error in preview: {str(e)}"}
+
+    def update_agent_name(self, agent_id: str, name: str) -> Dict[str, Any]:
+        """
+        Rename the agent.
+        """
+        url = f"{self.BASE_URL}/{agent_id}"
+        resp = self.session.put(url, json={"name": name})
+        resp.raise_for_status()
+        return resp.json()
+    
+    def get_properties(self, agent_id: str) -> List[Dict[str, Any]]:
+        """
+        Retrieve all properties for this agent.
+        """
+        url = f"{self.BASE_URL}/{agent_id}/properties"
+        resp = self.session.get(url)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get('content', [])
+
+    def add_chat_guideline(self, agent_id: str, guideline: str) -> Dict[str, Any]:
+        """
+        Fetch current persona guidelines, append the new one, and PUT back.
+        """
+        props = self.get_properties(agent_id)
+        # find existing persona entry
+        persona = next((p for p in props if p['prop']=='persona'), None)
+        existing = persona['value'] if persona else ''
+        # build updated multiline value
+        new_value = existing + '\n' + guideline if existing else guideline
+        # reuse the generic update_property under the hood
+        return self.update_property(agent_id, 'persona', new_value, 'agent')
 
     def extract_message(self, response: Dict[str, Any]) -> Optional[str]:
         """

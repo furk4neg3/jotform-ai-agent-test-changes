@@ -19,6 +19,7 @@ client = JotformAIAgentClient(
 app = Flask(__name__, static_folder='static')
 
 
+
 def generate_test_prompt(title: str, data: str, mode: str) -> str:
     """
     Use GPT to create a single question to exercise the new knowledge or action.
@@ -239,6 +240,105 @@ def update_persona():
             'api_result': api_res,
             'prompt': prompt,
             'reply': reply_msg
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+        
+@app.route('/update_name', methods=['POST'])
+def update_name():
+    try:
+        payload = request.json
+        agent_id = payload.get('agent_id')
+        new_name = payload.get('name')
+        if not agent_id or not new_name:
+            return jsonify({'error': 'Agent ID and new name are required'}), 400
+
+        # 1) Rename via PUT
+        api_res = client.update_agent_name(agent_id, new_name)
+
+        # 2) Preview change with a generic persona prompt
+        prompt = generate_test_prompt('', '', mode='persona')
+        preview = client._preview_change(agent_id, prompt)
+
+        # 3) Extract greeting & reply
+        initial_msg = None
+        reply_msg = None
+        if isinstance(preview, dict):
+            greeting = preview.get('greeting') or {}
+            agent_resp = preview.get('agent') or {}
+            initial_msg = client.extract_message(greeting)
+            reply_msg = client.extract_message(agent_resp)
+
+        return jsonify({
+            'initial_message': initial_msg,
+            'api_result': api_res,
+            'prompt': prompt,
+            'reply': reply_msg
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/update_role', methods=['POST'])
+def update_role():
+    try:
+        payload = request.json
+        agent_id = payload.get('agent_id')
+        new_role = payload.get('role')
+        if not agent_id or not new_role:
+            return jsonify({'error': 'Agent ID and new role are required'}), 400
+
+        # 1) Set role via properties endpoint
+        api_res = client.update_property(agent_id, 'role', new_role, 'agent')
+
+        # 2) Preview change
+        prompt = generate_test_prompt('', '', mode='persona')
+        preview = client._preview_change(agent_id, prompt)
+
+        initial_msg = None
+        reply_msg = None
+        if isinstance(preview, dict):
+            greeting = preview.get('greeting') or {}
+            agent_resp = preview.get('agent') or {}
+            initial_msg = client.extract_message(greeting)
+            reply_msg = client.extract_message(agent_resp)
+
+        return jsonify({
+            'initial_message': initial_msg,
+            'api_result': api_res,
+            'prompt': prompt,
+            'reply': reply_msg
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/add_guideline', methods=['POST'])
+def add_guideline():
+    try:
+        payload = request.json
+        agent_id  = payload.get('agent_id')
+        guideline = payload.get('guideline')
+        if not agent_id or not guideline:
+            return jsonify({'error': 'Agent ID and guideline text are required'}), 400
+
+        # 1) Append via client
+        api_res = client.add_chat_guideline(agent_id, guideline)
+
+        # 2) Preview with existing prompt flow
+        prompt  = generate_test_prompt('', '', mode='persona')
+        preview = client._preview_change(agent_id, prompt)
+
+        # 3) Extract greeting & reply
+        initial_msg = reply_msg = None
+        if isinstance(preview, dict):
+            initial_msg = client.extract_message(preview.get('greeting') or {})
+            reply_msg   = client.extract_message(preview.get('agent')   or {})
+
+        return jsonify({
+            'initial_message': initial_msg,
+            'api_result':      api_res,
+            'prompt':          prompt,
+            'reply':           reply_msg
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

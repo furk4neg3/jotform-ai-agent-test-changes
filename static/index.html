@@ -326,6 +326,20 @@
                         <option value="">Select value</option>
                     </select>
                 </div>
+                <div class="form-group">
+                    <label for="agent-name">Agent Name:</label>
+                    <input type="text" id="agent-name" placeholder="Enter new agent name">
+                </div>
+
+                <!-- NEW: Role input -->
+                <div class="form-group">
+                    <label for="agent-role">Agent Role:</label>
+                    <input type="text" id="agent-role" placeholder="Enter new agent role">
+                </div>
+                <div class="form-group">
+                  <label for="new-guideline">New Chat Guideline:</label>
+                  <textarea id="new-guideline" placeholder="Enter a single new guideline"></textarea>
+                </div>
                 <button class="submit-btn" onclick="updatePersona()">Update Persona</button>
             </div>
 
@@ -525,36 +539,46 @@
 
         // Update persona function
         async function updatePersona() {
-            const agentId = document.getElementById('agent-id').value;
-            const updateProp = document.getElementById('persona-property').value;
-            const updateValue = document.getElementById('persona-value').value;
+            const agentId      = document.getElementById('agent-id').value.trim();
+            const name         = document.getElementById('agent-name').value.trim();
+            const role         = document.getElementById('agent-role').value.trim();
+            const newGuideline = document.getElementById('new-guideline').value.trim();
+            const prop         = document.getElementById('persona-property').value;
+            const value        = document.getElementById('persona-value').value;
 
-            if (!agentId || !updateProp || !updateValue) {
-                alert('Please fill in all fields');
+            if (!agentId) {
+                alert('Please enter your Agent ID');
+                return;
+            }
+
+            let url, body;
+            if (name) {
+                url  = '/update_name';     body = { agent_id: agentId, name: name };
+            } else if (role) {
+                url  = '/update_role';     body = { agent_id: agentId, role: role };
+            } else if (newGuideline) {
+                url  = '/add_guideline';   body = { agent_id: agentId, guideline: newGuideline };
+            } else if (prop && value) {
+                url  = '/update_persona';  body = { agent_id: agentId, update_prop: prop, update_value: value };
+            } else {
+                alert('Fill in a Name, Role, Guideline, or select a persona property');
                 return;
             }
 
             showLoading();
-
             try {
-                const response = await fetch('/update_persona', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        agent_id: agentId,
-                        update_prop: updateProp,
-                        update_value: updateValue
-                    })
+                const res    = await fetch(url, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(body)
                 });
-
-                const result = await response.json();
+                const result = await res.json();
                 showResults(result);
-            } catch (error) {
-                showResults({ error: 'Error updating persona: ' + error.message });
-            }
+            } catch (err) {
+                showResults({ error: 'Error updating persona: ' + err.message });
         }
+        
+    }
     </script>
 </body>
 </html>
