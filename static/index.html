@@ -283,9 +283,14 @@
                         <label for="trigger-type">Trigger Type:</label>
                         <select id="trigger-type">
                             <option value="">Select trigger type</option>
-                            <option value="talks-about">Talks About</option>
-                            <option value="sentiment">Sentiment</option>
-                            <option value="ask-about">Ask About</option>
+                            <option value="talks-about">User Talks About</option>
+                            <option value="sentiment">User Sentiment Is</option>
+                            <option value="ask-about">User Asks About</option>
+                            <option value="conversation-start">Conversation Starts</option>
+                            <option value="intention">User Wants To</option>
+                            <option value="provides">User Provides</option>
+                            <option value="sentence-contains">User Sentence Contains</option>
+                            <option value="date-time">The Date Is</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -294,7 +299,9 @@
                             <option value="">Select action type</option>
                             <option value="talk-about">Talk About</option>
                             <option value="say-exact-message">Say Exact Message</option>
-                            <option value="collect-value">Collect Value</option>
+                            <option value="collect-value">Ask For Information About</option>
+                            <option value="always-include">Always Include</option>
+                            <option value="always-talk-about">Always Talk About</option>
                         </select>
                     </div>
                 </div>
@@ -316,6 +323,8 @@
                     <select id="persona-property">
                         <option value="">Select property to update</option>
                         <option value="language">Language</option>
+                        <option value="tone">Tone</option>
+                        <option value="chattiness">Chattiness</option>
                         <option value="tone">Tone</option>
                         <option value="chattiness">Chattiness</option>
                     </select>

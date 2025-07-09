@@ -131,6 +131,16 @@ def add_action():
             agent_trigger = [{"type": "sentiment", "value": {"sentiment": trigger_value}}]
         elif trigger_type == "ask-about":
             agent_trigger = [{"type": "ask-about", "value": {"about": trigger_value}}]
+        if trigger_type == "conversation-start":
+            agent_trigger = [{"type": "conversation-start", "value": {}}]
+        elif trigger_type == "intention":
+            agent_trigger = [{"type": "intention", "value": {"state": trigger_value}}]
+        elif trigger_type == "provides":
+            agent_trigger = [{"type": "provides", "value": {"provides": trigger_value}}]
+        elif trigger_type == "sentence-contains":
+            agent_trigger = [{"type": "sentence-contains", "value": {"keyword": trigger_value}}]
+        elif trigger_type == "date-time":
+            agent_trigger = [{"type": "date-time", "value": {"specify": trigger_value}}]
         else:
             return jsonify({'error': 'Invalid trigger type'}), 400
         
@@ -146,6 +156,10 @@ def add_action():
                     "field_type": {"value": "control_textarea"}
                 }]
             }]
+        elif trigger_type == "always-include":
+            agent_trigger = [{"type": "always-include", "value": {"include": trigger_value}}]
+        elif trigger_type == "always-talk-about":
+            agent_trigger = [{"type": "always-talk-about", "value": {"about": trigger_value}}]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         
