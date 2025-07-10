@@ -34,7 +34,7 @@ def generate_test_prompt(title: str, data: str, mode: str) -> str:
             'role': 'user',
             'content': f"Generate a single question that tests the knowledge titled '{title}' with data: {data}"  
         }
-    elif mode == 'action':
+    elif mode == 'action': 
         user = {
             'role': 'user',
             'content': f"Generate a single user message that would trigger the action for this action defined: {data}"  
@@ -131,7 +131,7 @@ def add_action():
             agent_trigger = [{"type": "sentiment", "value": {"sentiment": trigger_value}}]
         elif trigger_type == "ask-about":
             agent_trigger = [{"type": "ask-about", "value": {"about": trigger_value}}]
-        if trigger_type == "conversation-start":
+        elif trigger_type == "conversation-start":
             agent_trigger = [{"type": "conversation-start", "value": {}}]
         elif trigger_type == "intention":
             agent_trigger = [{"type": "intention", "value": {"state": trigger_value}}]
@@ -142,7 +142,7 @@ def add_action():
         elif trigger_type == "date-time":
             agent_trigger = [{"type": "date-time", "value": {"specify": trigger_value}}]
         else:
-            return jsonify({'error': 'Invalid trigger type'}), 400
+            return jsonify({'error': f'Invalid trigger type:{trigger_type}'}), 400
         
         if action_type == "talk-about":
             agent_action = [{"type": "talk-about", "value": {"about": action_value}}]
@@ -160,6 +160,8 @@ def add_action():
             agent_trigger = [{"type": "always-include", "value": {"include": trigger_value}}]
         elif trigger_type == "always-talk-about":
             agent_trigger = [{"type": "always-talk-about", "value": {"about": trigger_value}}]
+        elif action_type == "fill-form":
+            agent_action = [{"type": "fill-form", "value": {"form": action_value}}]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         
@@ -356,6 +358,27 @@ def add_guideline():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/get_forms', methods=['GET'])
+def get_forms():
+    """
+    Fetch all non-deleted Jotform forms for the current user.
+    """
+    url = 'https://www.jotform.com/API/user/forms'
+    params = {
+        # filter out deleted/purged forms
+        'filter': json.dumps({"status:ne": ["DELETED", "PURGED"]}),
+        'offset': 0,
+        'orderby': 'updated_at',
+        'limit': 10000,
+        'includeSharedForms': 0,
+        'checkDocuments': 0
+    }
+    resp = client.session.get(url, params=params)
+    resp.raise_for_status()
+    forms = resp.json().get('content', [])
+    # return the array of { id, title, … }
+    return jsonify(forms)
 
 
 @app.route('/')

@@ -27,6 +27,7 @@ Automatically test your Jotform AI Agent immediately after any configuration cha
 ## 📦 Tech Stack
 
 * **Backend**: Flask (Python)
+* **Custom HTTP Client:** Reverse-engineered Jotform’s hidden AI Agent web API via browser DevTools (network tab & cURL) to implement all agent-builder calls from scratch
 * **Jotform Client**: `JotformAIAgentClient` wrapping Jotform AI Agent Builder & Chat APIs
 * **AI Prompting**: OpenAI GPT (via `openai` Python SDK)
 * **Frontend**: Static HTML/CSS/JS (`index.html`) served from `static/`

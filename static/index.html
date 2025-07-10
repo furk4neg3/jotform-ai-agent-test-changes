@@ -302,6 +302,7 @@
                             <option value="collect-value">Ask For Information About</option>
                             <option value="always-include">Always Include</option>
                             <option value="always-talk-about">Always Talk About</option>
+                            <option value="fill-form">Fill Form</option>
                         </select>
                     </div>
                 </div>
@@ -309,9 +310,16 @@
                     <label for="trigger-value">Trigger Value:</label>
                     <input type="text" id="trigger-value" placeholder="Enter trigger value">
                 </div>
-                <div class="form-group">
-                    <label for="action-value">Action Value:</label>
-                    <input type="text" id="action-value" placeholder="Enter action value">
+                <div class="form-group" id="action-value-input-group">
+                    <label for="action-value-input">Action Value:</label>
+                    <input type="text" id="action-value-input" placeholder="Enter action value">
+                </div>
+                <!-- form selector (hidden until needed) -->
+                <div class="form-group" id="action-value-select-group" style="display:none;">
+                    <label for="action-value-select">Select Form:</label>
+                    <select id="action-value-select">
+                      <option value="">Loading forms…</option>
+                    </select>
                 </div>
                 <button class="submit-btn" onclick="addAction()">Add Action</button>
             </div>
@@ -426,6 +434,33 @@
             }
         });
 
+        // When the user picks an action type, toggle the input vs. dropdown
+        document.getElementById('action-type').addEventListener('change', function() {
+            const isFill = this.value === 'fill-form';
+            document.getElementById('action-value-input-group').style.display = isFill ? 'none' : 'block';
+            document.getElementById('action-value-select-group').style.display = isFill ? 'block' : 'none';
+            if (isFill) fetchForms();
+        });
+
+        // 2) Fetch the list of forms from our new endpoint
+        async function fetchForms() {
+            const select = document.getElementById('action-value-select');
+            select.innerHTML = '<option value="">Loading forms…</option>';
+            try {
+                const res = await fetch('/get_forms');
+                const forms = await res.json();
+                select.innerHTML = '<option value="">Select a form</option>';
+                forms.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.id;
+                    opt.textContent = f.title;
+                    select.appendChild(opt);
+                });
+            } catch (err) {
+                select.innerHTML = '<option value="">Error loading forms</option>';
+            }
+        }
+
         // Show loading
         function showLoading() {
             document.getElementById('loading').classList.add('show');
@@ -515,7 +550,14 @@
             const triggerType = document.getElementById('trigger-type').value;
             const triggerValue = document.getElementById('trigger-value').value;
             const actionType = document.getElementById('action-type').value;
-            const actionValue = document.getElementById('action-value').value;
+
+            // choose between input vs. select
+            let actionValue;
+            if (actionType === 'fill-form') {
+                actionValue = document.getElementById('action-value-select').value;
+            } else {
+                actionValue = document.getElementById('action-value-input').value;
+            }
 
             if (!agentId || !triggerType || !triggerValue || !actionType || !actionValue) {
                 alert('Please fill in all fields');
