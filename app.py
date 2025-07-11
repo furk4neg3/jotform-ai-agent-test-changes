@@ -162,6 +162,36 @@ def add_action():
             agent_trigger = [{"type": "always-talk-about", "value": {"about": trigger_value}}]
         elif action_type == "fill-form":
             agent_action = [{"type": "fill-form", "value": {"form": action_value}}]
+        elif action_type == "show-button":
+            # action_value is now a dict: { text: "...", url: "..." }
+            text = action_value.get("text", "")
+            url  = action_value.get("url", "")
+            agent_action = [{
+                "type": "show-button",
+                "value": {
+                    "button": "redirect-url",
+                    "text": text,
+                    "url": url
+                }
+            }]
+        elif action_type == "send-email":
+            # expect action_value to be a dict with keys:
+            #   subject, content, senderName, replyTo, recipient
+            props = action_value
+            agent_action = [{
+                "type": "send-email",
+                "value": {
+                    "emailProperties": {
+                        # minimal fields; you can extend this with Jotform defaults if needed
+                        "subject":  props.get("subject", ""),
+                        "content":  props.get("content", ""),
+                        "from":     props.get("senderName", ""),
+                        "replyTo":  [{"value": props.get("replyTo",""), "text": props.get("replyTo",""), "isValid": True}],
+                        "to":       [{"text": props.get("recipient",""), "isValid": True}],
+                        # leave other emailProperties at their defaults (Jotform will fill them)
+                    }
+                }
+            }]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         

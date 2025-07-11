@@ -303,6 +303,8 @@
                             <option value="always-include">Always Include</option>
                             <option value="always-talk-about">Always Talk About</option>
                             <option value="fill-form">Fill Form</option>
+                            <option value="show-button">Show Button</option>
+                            <option value="send-email">Send Email</option>
                         </select>
                     </div>
                 </div>
@@ -321,6 +323,29 @@
                       <option value="">Loading forms…</option>
                     </select>
                 </div>
+                <div class="form-group" id="action-button-group" style="display:none;">
+                    <label for="action-button-text">Button Text:</label>
+                    <input type="text" id="action-button-text" placeholder="e.g. Go To LV">
+
+                    <label for="action-button-url">Button URL:</label>
+                    <input type="text" id="action-button-url" placeholder="https://...">
+                </div>
+                <div class="form-group" id="action-email-group" style="display:none;">
+                <label for="action-email-subject">Email Subject:</label>
+                <input type="text" id="action-email-subject" placeholder="Subject">
+
+                <label for="action-email-content">Email Content (HTML):</label>
+                <textarea id="action-email-content" placeholder="<p>Your message…</p>"></textarea>
+
+                <label for="action-email-sender">Sender Name:</label>
+                <input type="text" id="action-email-sender" placeholder="E.g. Acme Support">
+
+                <label for="action-email-replyto">Reply-To Email:</label>
+                <input type="email" id="action-email-replyto" placeholder="you@domain.com">
+
+                <label for="action-email-recipient">Recipient Email:</label>
+                <input type="email" id="action-email-recipient" placeholder="them@domain.com">
+            </div>
                 <button class="submit-btn" onclick="addAction()">Add Action</button>
             </div>
 
@@ -436,9 +461,17 @@
 
         // When the user picks an action type, toggle the input vs. dropdown
         document.getElementById('action-type').addEventListener('change', function() {
-            const isFill = this.value === 'fill-form';
-            document.getElementById('action-value-input-group').style.display = isFill ? 'none' : 'block';
-            document.getElementById('action-value-select-group').style.display = isFill ? 'block' : 'none';
+            const type = this.value;
+            const isFill       = type === 'fill-form';
+            const isShowButton = type === 'show-button';
+            const isEmail      = type === 'send-email';
+
+            // show/hide input groups
+            document.getElementById('action-value-input-group').style.display  = (!isFill && !isShowButton && !isEmail) ? 'block' : 'none';
+            document.getElementById('action-value-select-group').style.display = isFill       ? 'block' : 'none';
+            document.getElementById('action-button-group').style.display       = isShowButton ? 'block' : 'none';
+            document.getElementById('action-email-group').style.display        = isEmail      ? 'block' : 'none';
+
             if (isFill) fetchForms();
         });
 
@@ -555,7 +588,20 @@
             let actionValue;
             if (actionType === 'fill-form') {
                 actionValue = document.getElementById('action-value-select').value;
-            } else {
+            }else if (actionType === 'show-button') {
+                actionValue = {
+                    text: document.getElementById('action-button-text').value,
+                    url:  document.getElementById('action-button-url').value
+                };
+            } else if (actionType === 'send-email') {
+                actionValue = {
+                    subject:    document.getElementById('action-email-subject').value,
+                    content:    document.getElementById('action-email-content').value,
+                    senderName: document.getElementById('action-email-sender').value,
+                    replyTo:    document.getElementById('action-email-replyto').value,
+                    recipient:  document.getElementById('action-email-recipient').value
+                };
+            }else {
                 actionValue = document.getElementById('action-value-input').value;
             }
 
