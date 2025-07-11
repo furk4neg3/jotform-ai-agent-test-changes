@@ -192,6 +192,29 @@ def add_action():
                     }
                 }
             }]
+        elif action_type == "send-api-request":
+            props    = action_value or {}
+            endpoint = props.get("endpoint", "")
+            method   = props.get("method", "GET").upper()
+            agent_action = [{
+                "type": "send-api-request",
+                "value": {
+                    "endpoint": endpoint,
+                    "method":   method
+                }
+            }]
+        elif action_type == "search-in-website":
+            props      = action_value or {}
+            website    = props.get("website", "")
+            searchfor  = props.get("searchfor", "")
+
+            agent_action = [{
+                "type": "search-in-website",
+                "value": {
+                    "website":   website,
+                    "searchfor": searchfor
+                }
+            }]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         

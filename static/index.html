@@ -305,6 +305,8 @@
                             <option value="fill-form">Fill Form</option>
                             <option value="show-button">Show Button</option>
                             <option value="send-email">Send Email</option>
+                            <option value="send-api-request">Send API Request</option>
+                            <option value="search-in-website">Find in Website</option>
                         </select>
                     </div>
                 </div>
@@ -345,6 +347,30 @@
 
                 <label for="action-email-recipient">Recipient Email:</label>
                 <input type="email" id="action-email-recipient" placeholder="them@domain.com">
+            </div>
+            <div class="form-group" id="action-api-group" style="display: none;">
+            <label for="action-api-method">Method:</label>
+            <select id="action-api-method">
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+            </select>
+
+            <label for="action-api-endpoint">Endpoint URL:</label>
+            <input type="text" id="action-api-endpoint" placeholder="https://api.example.com/…">
+            </div>
+            <div class="form-group" id="action-website-group" style="display:none;">
+            <label for="action-website-url">Website URL:</label>
+            <input type="text" id="action-website-url" placeholder="https://example.com">
+
+            <label for="action-website-searchfor">Search For:</label>
+            <input type="text" id="action-website-searchfor" placeholder="Keyword or phrase">
+            </div>
+            <div class="form-group" id="action-website-group" style="display:none;">
+            <label for="action-website-url">Website URL:</label>
+            <input type="text" id="action-website-url" placeholder="https://example.com">
+
+            <label for="action-website-searchfor">Search For:</label>
+            <input type="text" id="action-website-searchfor" placeholder="Keyword or phrase">
             </div>
                 <button class="submit-btn" onclick="addAction()">Add Action</button>
             </div>
@@ -461,20 +487,49 @@
 
         // When the user picks an action type, toggle the input vs. dropdown
         document.getElementById('action-type').addEventListener('change', function() {
-            const type = this.value;
-            const isFill       = type === 'fill-form';
-            const isShowButton = type === 'show-button';
-            const isEmail      = type === 'send-email';
+            const type       = this.value;
+            const isFill     = type === 'fill-form';
+            const isShowBtn  = type === 'show-button';
+            const isEmail    = type === 'send-email';
+            const isApi      = type === 'send-api-request';
+            const isSearchWS = type === 'search-in-website';
 
-            // show/hide input groups
-            document.getElementById('action-value-input-group').style.display  = (!isFill && !isShowButton && !isEmail) ? 'block' : 'none';
-            document.getElementById('action-value-select-group').style.display = isFill       ? 'block' : 'none';
-            document.getElementById('action-button-group').style.display       = isShowButton ? 'block' : 'none';
-            document.getElementById('action-email-group').style.display        = isEmail      ? 'block' : 'none';
+            // default free-text input
+            document.getElementById('action-value-input-group').style.display  =
+            (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS) ? 'block' : 'none';
 
-            if (isFill) fetchForms();
+            // fill form dropdown
+            document.getElementById('action-value-select-group').style.display =
+            isFill ? 'block' : 'none';
+
+            // show-button inputs
+            document.getElementById('action-button-group').style.display =
+            isShowBtn ? 'block' : 'none';
+
+            // send-email inputs
+            document.getElementById('action-email-group').style.display =
+            isEmail ? 'block' : 'none';
+
+            // send-api-request inputs
+            document.getElementById('action-api-group').style.display =
+            isApi ? 'block' : 'none';
+
+            // search-in-website inputs
+            document.getElementById('action-website-group').style.display =
+            isSearchWS ? 'block' : 'none';
+
+            // if they chose Fill Form, go load the forms
+            if (isFill) {
+            fetchForms();
+            }
         });
 
+  // 2) When the API method changes, toggle the body field
+  document.getElementById('action-api-method').addEventListener('change', function() {
+    const isPost = this.value === 'POST';
+    document.getElementById('action-api-body-group').style.display =
+      isPost ? 'block' : 'none';
+  });
         // 2) Fetch the list of forms from our new endpoint
         async function fetchForms() {
             const select = document.getElementById('action-value-select');
@@ -601,7 +656,18 @@
                     replyTo:    document.getElementById('action-email-replyto').value,
                     recipient:  document.getElementById('action-email-recipient').value
                 };
+            }else if (actionType === 'send-api-request') {
+                actionValue = {
+                method:   document.getElementById('action-api-method').value,
+                endpoint: document.getElementById('action-api-endpoint').value
+                };
+            }else if (actionType === 'search-in-website') {
+                actionValue = {
+                    website:   document.getElementById('action-website-url').value,
+                    searchfor: document.getElementById('action-website-searchfor').value
+                };
             }else {
+                // default free‐text input
                 actionValue = document.getElementById('action-value-input').value;
             }
 
