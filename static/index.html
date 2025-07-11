@@ -307,6 +307,7 @@
                             <option value="send-email">Send Email</option>
                             <option value="send-api-request">Send API Request</option>
                             <option value="search-in-website">Find in Website</option>
+                            <option value="show-video">Show Video</option>
                         </select>
                     </div>
                 </div>
@@ -371,6 +372,20 @@
 
             <label for="action-website-searchfor">Search For:</label>
             <input type="text" id="action-website-searchfor" placeholder="Keyword or phrase">
+            </div>
+            <div class="form-group" id="action-video-group" style="display:none;">
+            <label for="action-video-platform">Platform:</label>
+            <select id="action-video-platform">
+                <option value="">Select platform</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Vimeo">Vimeo</option>
+                <option value="23 Video">23 Video</option>
+                <option value="Loom Video Embed">Loom Video Embed</option>
+                <option value="Animoto">Animoto</option>
+            </select>
+
+            <label for="action-video-url">Video URL:</label>
+            <input type="text" id="action-video-url" placeholder="https://...">
             </div>
                 <button class="submit-btn" onclick="addAction()">Add Action</button>
             </div>
@@ -493,6 +508,7 @@
             const isEmail    = type === 'send-email';
             const isApi      = type === 'send-api-request';
             const isSearchWS = type === 'search-in-website';
+            const isShowVideo = type === 'show-video';
 
             // default free-text input
             document.getElementById('action-value-input-group').style.display  =
@@ -517,6 +533,16 @@
             // search-in-website inputs
             document.getElementById('action-website-group').style.display =
             isSearchWS ? 'block' : 'none';
+
+            // hide the default free-text when ANY custom group is shown
+            document.getElementById('action-value-input-group').style.display =
+            (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS && !isShowVideo)
+                ? 'block'
+                : 'none';
+
+// show our new group
+document.getElementById('action-video-group').style.display =
+  isShowVideo ? 'block' : 'none';
 
             // if they chose Fill Form, go load the forms
             if (isFill) {
@@ -665,6 +691,11 @@
                 actionValue = {
                     website:   document.getElementById('action-website-url').value,
                     searchfor: document.getElementById('action-website-searchfor').value
+                };
+            }else if (actionType === 'show-video') {
+                actionValue = {
+                    platform: document.getElementById('action-video-platform').value,
+                    url:      document.getElementById('action-video-url').value
                 };
             }else {
                 // default free‐text input

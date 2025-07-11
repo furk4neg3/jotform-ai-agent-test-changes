@@ -215,6 +215,19 @@ def add_action():
                     "searchfor": searchfor
                 }
             }]
+        elif action_type == "show-video":
+            # props comes in as { platform: "...", url: "..." }
+            props    = action_value or {}
+            platform = props.get("platform", "")
+            url      = props.get("url", "")
+
+            agent_action = [{
+                "type": "show-video",
+                "value": {
+                    "platform": platform,
+                    "rule":     url
+                }
+            }]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         
