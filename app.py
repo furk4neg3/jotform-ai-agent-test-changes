@@ -120,8 +120,12 @@ def add_action():
         trigger_value = payload.get('trigger_value')
         action_type = payload.get('action_type')
         action_value = payload.get('action_value')
+        if action_type == "show-screen-share-button":
+            emptyable = True
+        else:
+            emptyable = False
         
-        if not all([agent_id, trigger_type, trigger_value, action_type, action_value]):
+        if (not all([agent_id, trigger_type, trigger_value, action_type, action_value]) and not emptyable):
             return jsonify({'error': 'All fields are required'}), 400
 
         # 2) Create parameters from user defined values
@@ -241,6 +245,12 @@ def add_action():
                     "knowledge": knowledge
                 }
             }]
+        elif action_type == "show-screen-share-button":
+            # No inputs needed—just send an empty value object
+            agent_action = [{
+                "type": "show-screen-share-button",
+                "value": {}
+            }]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         
@@ -297,8 +307,12 @@ def update_persona():
         agent_id = payload.get('agent_id')
         update_prop = payload.get('update_prop')
         update_value = payload.get('update_value')
+        if action_type == "show-screen-share-button":
+            emptyable = True
+        else:
+            emptyable = False
         
-        if not all([agent_id, update_prop, update_value]):
+        if not all([agent_id, trigger_type, trigger_value, action_type, action_value]):
             return jsonify({'error': 'All fields are required'}), 400
         
         update_prop_type = "agent"

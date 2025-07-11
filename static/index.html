@@ -309,6 +309,7 @@
                             <option value="search-in-website">Find in Website</option>
                             <option value="show-video">Show Video</option>
                             <option value="use-knowledge-base">Answer Using Knowledge Base</option>
+                            <option value="show-screen-share-button">Allow Screen Sharing for Visual Guidance</option>
                         </select>
                     </div>
                 </div>
@@ -517,10 +518,11 @@
             const isSearchWS = type === 'search-in-website';
             const isShowVideo= type === 'show-video';
             const isKb       = type === 'use-knowledge-base';
+            const isShare = type === 'show-screen-share-button';
 
             // ← updated
             document.getElementById('action-value-input-group').style.display =
-                (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS && !isShowVideo && !isKb)
+                (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS && !isShowVideo && !isKb && !isShare)
                 ? 'block' : 'none';
 
             document.getElementById('action-value-select-group').style.display = isFill     ? 'block' : 'none';
@@ -689,12 +691,15 @@
                 actionValue = {
                     knowledge: JSON.stringify({ id: uuid, type: 'knowledge', text: title })
                 };
+            }else if (actionType === 'show-screen-share-button') {
+                actionValue = {};   // no fields required
             }else {
                             // default free‐text input
                 actionValue = document.getElementById('action-value-input').value;
             }
 
-            if (!agentId || !triggerType || !triggerValue || !actionType || !actionValue) {
+            const requireValue = actionType !== 'show-screen-share-button';
+            if (!agentId || !triggerType || !triggerValue || !actionType || (requireValue && !actionValue)) {
                 alert('Please fill in all fields');
                 return;
             }
