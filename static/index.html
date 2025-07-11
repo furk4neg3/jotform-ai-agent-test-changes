@@ -308,6 +308,7 @@
                             <option value="send-api-request">Send API Request</option>
                             <option value="search-in-website">Find in Website</option>
                             <option value="show-video">Show Video</option>
+                            <option value="use-knowledge-base">Answer Using Knowledge Base</option>
                         </select>
                     </div>
                 </div>
@@ -386,6 +387,12 @@
 
             <label for="action-video-url">Video URL:</label>
             <input type="text" id="action-video-url" placeholder="https://...">
+            </div>
+            <div class="form-group" id="action-kb-group" style="display:none;">
+            <label for="action-kb-select">Select Knowledge Base:</label>
+            <select id="action-kb-select">
+                <option value="">Loading…</option>
+            </select>
             </div>
                 <button class="submit-btn" onclick="addAction()">Add Action</button>
             </div>
@@ -508,46 +515,24 @@
             const isEmail    = type === 'send-email';
             const isApi      = type === 'send-api-request';
             const isSearchWS = type === 'search-in-website';
-            const isShowVideo = type === 'show-video';
+            const isShowVideo= type === 'show-video';
+            const isKb       = type === 'use-knowledge-base';
 
-            // default free-text input
-            document.getElementById('action-value-input-group').style.display  =
-            (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS) ? 'block' : 'none';
-
-            // fill form dropdown
-            document.getElementById('action-value-select-group').style.display =
-            isFill ? 'block' : 'none';
-
-            // show-button inputs
-            document.getElementById('action-button-group').style.display =
-            isShowBtn ? 'block' : 'none';
-
-            // send-email inputs
-            document.getElementById('action-email-group').style.display =
-            isEmail ? 'block' : 'none';
-
-            // send-api-request inputs
-            document.getElementById('action-api-group').style.display =
-            isApi ? 'block' : 'none';
-
-            // search-in-website inputs
-            document.getElementById('action-website-group').style.display =
-            isSearchWS ? 'block' : 'none';
-
-            // hide the default free-text when ANY custom group is shown
+            // ← updated
             document.getElementById('action-value-input-group').style.display =
-            (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS && !isShowVideo)
-                ? 'block'
-                : 'none';
+                (!isFill && !isShowBtn && !isEmail && !isApi && !isSearchWS && !isShowVideo && !isKb)
+                ? 'block' : 'none';
 
-// show our new group
-document.getElementById('action-video-group').style.display =
-  isShowVideo ? 'block' : 'none';
+            document.getElementById('action-value-select-group').style.display = isFill     ? 'block' : 'none';
+            document.getElementById('action-button-group').style.display       = isShowBtn  ? 'block' : 'none';
+            document.getElementById('action-email-group').style.display        = isEmail    ? 'block' : 'none';
+            document.getElementById('action-api-group').style.display          = isApi      ? 'block' : 'none';
+            document.getElementById('action-website-group').style.display      = isSearchWS ? 'block' : 'none';
+            document.getElementById('action-video-group').style.display        = isShowVideo? 'block' : 'none';
+            document.getElementById('action-kb-group').style.display           = isKb       ? 'block' : 'none';
 
-            // if they chose Fill Form, go load the forms
-            if (isFill) {
-            fetchForms();
-            }
+            if (isFill)      fetchForms();
+            if (isKb)        fetchKnowledgeBases(document.getElementById('agent-id').value);
         });
 
   // 2) When the API method changes, toggle the body field
@@ -697,8 +682,15 @@ document.getElementById('action-video-group').style.display =
                     platform: document.getElementById('action-video-platform').value,
                     url:      document.getElementById('action-video-url').value
                 };
+            }else if (actionType === 'use-knowledge-base') {
+                const sel   = document.getElementById('action-kb-select');
+                const uuid  = sel.value;
+                const title = sel.options[sel.selectedIndex]?.text || '';
+                actionValue = {
+                    knowledge: JSON.stringify({ id: uuid, type: 'knowledge', text: title })
+                };
             }else {
-                // default free‐text input
+                            // default free‐text input
                 actionValue = document.getElementById('action-value-input').value;
             }
 
@@ -770,8 +762,26 @@ document.getElementById('action-video-group').style.display =
                 showResults(result);
             } catch (err) {
                 showResults({ error: 'Error updating persona: ' + err.message });
+        } 
+    }
+    async function fetchKnowledgeBases(agentId) {
+        const select = document.getElementById('action-kb-select');
+        select.innerHTML = '<option>Loading…</option>';
+        try {
+            const res = await fetch(`/get_materials/${agentId}`);
+            if (!res.ok) throw new Error(`${res.status}: ${await res.text()}`);
+            const materials = await res.json();
+            select.innerHTML = '<option value="">Select one…</option>';
+            materials.forEach(mat => {
+            const opt = document.createElement('option');
+            opt.value = mat.uuid;        // store the uuid
+            opt.textContent = mat.title; // show the title
+            select.appendChild(opt);
+            });
+        } catch (err) {
+            console.error('Error loading KB:', err);
+            select.innerHTML = '<option>Error loading materials</option>';
         }
-        
     }
     </script>
 </body>

@@ -228,6 +228,19 @@ def add_action():
                     "rule":     url
                 }
             }]
+        elif action_type == "use-knowledge-base":
+            props      = request.json.get('action_value', {}) or {}
+            knowledge  = props.get('knowledge', '')
+            # if they passed an object, stringify it
+            if isinstance(knowledge, dict):
+                knowledge = json.dumps(knowledge)
+
+            agent_action = [{
+                "type": "use-knowledge-base",
+                "value": {
+                    "knowledge": knowledge
+                }
+            }]
         else:
             return jsonify({'error': 'Invalid action type'}), 400
         
@@ -445,6 +458,20 @@ def get_forms():
     forms = resp.json().get('content', [])
     # return the array of { id, title, … }
     return jsonify(forms)
+
+@app.route('/get_materials/<agent_id>', methods=['GET'])
+def get_materials(agent_id):
+    """
+    Proxy to Jotform’s GET /materials for the given agent.
+    """
+    url = f'https://www.jotform.com/API/ai-agent-builder/agents/{agent_id}/materials'
+    try:
+        resp = client.session.get(url)
+        resp.raise_for_status()
+        return jsonify(resp.json().get('content', []))
+    except Exception as e:
+        app.logger.exception("Error in /get_materials")
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/')
