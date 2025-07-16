@@ -751,43 +751,57 @@
         /// Show results
         function showResults(data) {
             const resultsContent = document.getElementById('results-content');
-            resultsContent.innerHTML = '';
+                resultsContent.innerHTML = '';
 
             if (data.error) {
                 resultsContent.innerHTML = `<div class="error">${data.error}</div>`;
             } else {
-                // Convert Markdown → HTML
+                // 1) Always show the initial greeting
                 const greetingHtml = marked.parse(data.initial_message || 'No greeting message');
-                const promptHtml   = marked.parse(data.prompt         || 'No prompt generated');
-                const replyHtml    = marked.parse(data.reply          || 'No response received');
-                const statusHtml   = `<p><strong>Status:</strong> ${data.api_result?.responseCode || 'Unknown'}</p>`;
-                const messageHtml  = `<p><strong>Message:</strong> ${marked.parse(data.api_result?.message || 'No message')}</p>`;
-
-                // Build the results HTML
-                resultsContent.innerHTML = `
-                <div class="result-item">
-                    <h4>Initial Greeting</h4>
-                    <div class="markdown-content">${greetingHtml}</div>
-                </div>
-                <div class="result-item">
-                    <h4>Generated Test Prompt</h4>
-                    <div class="markdown-content">${promptHtml}</div>
-                </div>
-                <div class="result-item">
-                    <h4>Agent Response</h4>
-                    <div class="markdown-content">${replyHtml}</div>
-                </div>
-                <div class="result-item">
-                    <h4>API Result</h4>
-                    ${statusHtml}
-                    ${messageHtml}
-                </div>
+                resultsContent.innerHTML += `
+                    <div class="result-item">
+                        <h4>Initial Greeting</h4>
+                        <div class="markdown-content">${greetingHtml}</div>
+                    </div>
                 `;
+
+                // 2) Normalize to an array of previews
+                //    - new /batch_update returns data.previews[]
+                //    - legacy calls return prompt/reply/api_result directly
+                const previews = Array.isArray(data.previews)
+                    ? data.previews
+                    : [{ prompt: data.prompt, reply: data.reply, api_result: data.api_result }];
+
+                // 3) Loop and render each generated prompt + reply + API status
+                previews.forEach((preview, idx) => {
+                    const promptHtml  = marked.parse(preview.prompt  || 'No prompt generated');
+                    const replyHtml   = marked.parse(preview.reply   || 'No response received');
+                    const apiRes      = preview.api_result || {};
+                    const statusHtml  = `<p><strong>Status:</strong> ${apiRes.responseCode || 'Unknown'}</p>`;
+                    const messageHtml = `<p><strong>Message:</strong> ${marked.parse(apiRes.message || 'No message')}</p>`;
+
+                    resultsContent.innerHTML += `
+                        <div class="result-item">
+                            <h4>Generated Test Prompt${previews.length>1 ? ' #' + (idx+1) : ''}</h4>
+                            <div class="markdown-content">${promptHtml}</div>
+                        </div>
+                        <div class="result-item">
+                            <h4>Agent Response</h4>
+                            <div class="markdown-content">${replyHtml}</div>
+                        </div>
+                        <div class="result-item">
+                            <h4>API Result</h4>
+                            ${statusHtml}
+                            ${messageHtml}
+                        </div>
+                    `;
+                });
             }
 
             document.getElementById('results').style.display = 'block';
             hideLoading();
         }
+
 
         // Add knowledge function
         async function addKnowledge() {

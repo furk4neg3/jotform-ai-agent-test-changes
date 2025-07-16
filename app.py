@@ -630,7 +630,15 @@ def batch_update():
         if not agent_id or not ops:
             return jsonify({'error': 'Need agent_id and a non-empty operations list'}), 400
 
+        # Start one preview chat
+        chat_resp    = client.create_chat(agent_id)
+        chat_id      = chat_resp["content"]["id"]
+        # Get the greeting
+        greet_resp   = client.send_message(agent_id, chat_id, "", is_first_question=True)
+        initial_msg  = client.extract_message(greet_resp)
+
         results = []
+        previews = []
         for op in ops:
             typ = op.get('type')
             try:
@@ -639,6 +647,7 @@ def batch_update():
                     title  = op.get('title', 'Knowledge')
                     data   = op['data']
                     res    = client.add_knowledge(agent_id, title, data)
+                    prompt = generate_test_prompt(title, data, mode='knowledge')
                 elif typ == 'action':
                     # op: { type:'action', trigger_type, trigger_value, action_type, action_value }
                     # **reuse** the same logic you have in your add_action view
@@ -659,6 +668,11 @@ def batch_update():
                         tasks   = tasks,
                         channels= ["all", "standalone", "chatbot", "phone", "voice", "messenger", "sms", "whatsapp"]
                     )
+                    prompt = generate_test_prompt(
+                        op['trigger_value'],
+                        json.dumps(op['action_value']),
+                        mode='action'
+                    )
                 elif typ == 'update_persona':
                     # op: { type:'update_persona', update_prop?, update_value?, name?, role?, guideline? }
                     if op.get('name'):
@@ -674,12 +688,30 @@ def batch_update():
                             op['update_value'],
                             'agent'
                         )
+                    prompt = generate_test_prompt('', '', mode='persona')
                 else:
                     raise ValueError(f"Unknown operation type: {typ}")
                 results.append({'operation': op, 'result': res})
             except Exception as e:
                 results.append({'operation': op, 'error': str(e)})
-        return jsonify({'batch_results': results})
+                continue
+            agent_resp = client.send_message(
+                agent_id,
+                chat_id,
+                prompt,
+                is_first_question=False
+            )
+            reply_msg = client.extract_message(agent_resp)
+            previews.append({
+                'operation': op,
+                'prompt':    prompt,
+                'reply':     reply_msg
+            })
+        return jsonify({
+            'initial_message': initial_msg,
+            'batch_results':   results,
+            'previews':        previews
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
