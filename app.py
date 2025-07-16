@@ -635,10 +635,8 @@ def batch_update():
         chat_id      = chat_resp["content"]["id"]
         # Get the greeting
         greet_resp   = client.send_message(agent_id, chat_id, "", is_first_question=True)
-        initial_msg  = client.extract_message(greet_resp)
 
         results = []
-        previews = []
         for op in ops:
             typ = op.get('type')
             try:
@@ -701,16 +699,9 @@ def batch_update():
                 prompt,
                 is_first_question=False
             )
-            reply_msg = client.extract_message(agent_resp)
-            previews.append({
-                'operation': op,
-                'prompt':    prompt,
-                'reply':     reply_msg
-            })
+        print(chat_id, agent_id)
         return jsonify({
-            'initial_message': initial_msg,
-            'batch_results':   results,
-            'previews':        previews
+            'chat_id': chat_id
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500

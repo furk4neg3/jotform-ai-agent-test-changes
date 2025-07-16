@@ -446,9 +446,13 @@
             </div>
 
             <!-- Results section -->
-            <div id="results" class="result-section" style="display: none;">
-                <h3>Results</h3>
-                <div id="results-content"></div>
+            <div id="chat-frame-container" style="display: none; margin-top: 40px;">
+                <h3>Live Chat Preview</h3>
+                <iframe
+                    id="chat-iframe"
+                    style="width:100%; height:500px; border:1px solid #e1e5e9; border-radius:10px;"
+                    sandbox="allow-scripts allow-same-origin allow-forms"
+                ></iframe>
             </div>
         </div>
     </div>
@@ -740,7 +744,7 @@
         // Show loading
         function showLoading() {
             document.getElementById('loading').classList.add('show');
-            document.getElementById('results').style.display = 'none';
+            document.getElementById('chat-frame-container').style.display = 'none';
         }
 
         // Hide loading
@@ -750,55 +754,17 @@
 
         /// Show results
         function showResults(data) {
-            const resultsContent = document.getElementById('results-content');
-                resultsContent.innerHTML = '';
+            const agentId = document.getElementById('agent-id').value.trim();
 
-            if (data.error) {
-                resultsContent.innerHTML = `<div class="error">${data.error}</div>`;
+            const chatFrame = document.getElementById('chat-frame-container');
+            if (data.chat_id) {
+                chatFrame.style.display = 'block';
+                document.getElementById('chat-iframe').src =
+                `https://www.jotform.com/agent/${agentId}/view/${data.chat_id}`;
             } else {
-                // 1) Always show the initial greeting
-                const greetingHtml = marked.parse(data.initial_message || 'No greeting message');
-                resultsContent.innerHTML += `
-                    <div class="result-item">
-                        <h4>Initial Greeting</h4>
-                        <div class="markdown-content">${greetingHtml}</div>
-                    </div>
-                `;
-
-                // 2) Normalize to an array of previews
-                //    - new /batch_update returns data.previews[]
-                //    - legacy calls return prompt/reply/api_result directly
-                const previews = Array.isArray(data.previews)
-                    ? data.previews
-                    : [{ prompt: data.prompt, reply: data.reply, api_result: data.api_result }];
-
-                // 3) Loop and render each generated prompt + reply + API status
-                previews.forEach((preview, idx) => {
-                    const promptHtml  = marked.parse(preview.prompt  || 'No prompt generated');
-                    const replyHtml   = marked.parse(preview.reply   || 'No response received');
-                    const apiRes      = preview.api_result || {};
-                    const statusHtml  = `<p><strong>Status:</strong> ${apiRes.responseCode || 'Unknown'}</p>`;
-                    const messageHtml = `<p><strong>Message:</strong> ${marked.parse(apiRes.message || 'No message')}</p>`;
-
-                    resultsContent.innerHTML += `
-                        <div class="result-item">
-                            <h4>Generated Test Prompt${previews.length>1 ? ' #' + (idx+1) : ''}</h4>
-                            <div class="markdown-content">${promptHtml}</div>
-                        </div>
-                        <div class="result-item">
-                            <h4>Agent Response</h4>
-                            <div class="markdown-content">${replyHtml}</div>
-                        </div>
-                        <div class="result-item">
-                            <h4>API Result</h4>
-                            ${statusHtml}
-                            ${messageHtml}
-                        </div>
-                    `;
-                });
+                chatFrame.style.display = 'none';
             }
 
-            document.getElementById('results').style.display = 'block';
             hideLoading();
         }
 
