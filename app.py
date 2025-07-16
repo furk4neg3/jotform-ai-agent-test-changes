@@ -5,7 +5,7 @@ import os
 import json
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()       
 
 # Load env vars
 JOTFORM_SESSION = os.getenv('JOTFORM_SESSION')
@@ -120,12 +120,8 @@ def add_action():
         trigger_value = payload.get('trigger_value')
         action_type = payload.get('action_type')
         action_value = payload.get('action_value')
-        if action_type == "show-screen-share-button":
-            emptyable = True
-        else:
-            emptyable = False
         
-        if (not all([agent_id, trigger_type, trigger_value, action_type, action_value]) and not emptyable):
+        if (not all([agent_id, trigger_type, trigger_value, action_type, action_value]) and not (action_type == "show-screen-share-button") and not (trigger_type == "conversation-start")):
             return jsonify({'error': 'All fields are required'}), 400
 
         # 2) Create parameters from user defined values
@@ -145,6 +141,11 @@ def add_action():
             agent_trigger = [{"type": "sentence-contains", "value": {"keyword": trigger_value}}]
         elif trigger_type == "date-time":
             agent_trigger = [{"type": "date-time", "value": {"specify": trigger_value}}]
+        elif trigger_type == "url-contains":
+            agent_trigger = [{
+                "type": "url-contains",
+                "value": {"contains": trigger_value}
+            }]
         else:
             return jsonify({'error': f'Invalid trigger type:{trigger_type}'}), 400
         
@@ -160,10 +161,10 @@ def add_action():
                     "field_type": {"value": "control_textarea"}
                 }]
             }]
-        elif trigger_type == "always-include":
-            agent_trigger = [{"type": "always-include", "value": {"include": trigger_value}}]
-        elif trigger_type == "always-talk-about":
-            agent_trigger = [{"type": "always-talk-about", "value": {"about": trigger_value}}]
+        elif action_type == "always-include":
+            agent_action = [{"type": "always-include", "value": {"include": action_value}}]
+        elif action_type == "always-talk-about":
+            agent_action = [{"type": "always-talk-about", "value": {"about": action_value}}]
         elif action_type == "fill-form":
             agent_action = [{"type": "fill-form", "value": {"form": action_value}}]
         elif action_type == "show-button":

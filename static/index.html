@@ -291,6 +291,7 @@
                             <option value="provides">User Provides</option>
                             <option value="sentence-contains">User Sentence Contains</option>
                             <option value="date-time">The Date Is</option>
+                            <option value="url-contains">Page URL Contains</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -313,7 +314,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="form-group">
+                <div class="form-group" id="trigger-value-group">
                     <label for="trigger-value">Trigger Value:</label>
                     <input type="text" id="trigger-value" placeholder="Enter trigger value">
                 </div>
@@ -508,6 +509,28 @@
             }
         });
 
+        document.getElementById('trigger-type').addEventListener('change', function() {
+            const type = this.value;
+            const valueGroup = document.getElementById('trigger-value-group');
+            
+            // Hide when conversation-start is selected
+            if (type === 'conversation-start') {
+                valueGroup.style.display = 'none';
+            } else {
+                valueGroup.style.display = 'block';
+            }
+
+            // Update placeholder based on trigger type
+            const input = document.getElementById('trigger-value');
+            if (type === 'url-contains') {
+                input.placeholder = 'Enter substring of page URL';
+            } else if (type === 'sentence-contains') {
+                input.placeholder = 'Enter keyword to match in sentence';
+            } else {
+                input.placeholder = 'Enter trigger value';
+            }
+        });
+
         // When the user picks an action type, toggle the input vs. dropdown
         document.getElementById('action-type').addEventListener('change', function() {
             const type       = this.value;
@@ -696,12 +719,6 @@
             }else {
                             // default free‐text input
                 actionValue = document.getElementById('action-value-input').value;
-            }
-
-            const requireValue = actionType !== 'show-screen-share-button';
-            if (!agentId || !triggerType || !triggerValue || !actionType || (requireValue && !actionValue)) {
-                alert('Please fill in all fields');
-                return;
             }
 
             showLoading();
