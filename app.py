@@ -488,6 +488,201 @@ def get_materials(agent_id):
         app.logger.exception("Error in /get_materials")
         return jsonify({'error': str(e)}), 500
 
+def build_causes_and_tasks(trigger_type, trigger_value, action_type, action_value):
+    # 1) Build causes (agent_trigger)
+    if trigger_type == "talks-about":
+        agent_trigger = [{"type": "talks-about", "value": {"about": trigger_value}}]
+    elif trigger_type == "sentiment":
+        agent_trigger = [{"type": "sentiment", "value": {"sentiment": trigger_value}}]
+    elif trigger_type == "ask-about":
+        agent_trigger = [{"type": "ask-about", "value": {"about": trigger_value}}]
+    elif trigger_type == "conversation-start":
+        agent_trigger = [{"type": "conversation-start", "value": {}}]
+    elif trigger_type == "intention":
+        agent_trigger = [{"type": "intention", "value": {"state": trigger_value}}]
+    elif trigger_type == "provides":
+        agent_trigger = [{"type": "provides", "value": {"provides": trigger_value}}]
+    elif trigger_type == "sentence-contains":
+        agent_trigger = [{"type": "sentence-contains", "value": {"keyword": trigger_value}}]
+    elif trigger_type == "date-time":
+        agent_trigger = [{"type": "date-time", "value": {"specify": trigger_value}}]
+    elif trigger_type == "url-contains":
+        agent_trigger = [{
+            "type": "url-contains",
+            "value": {"contains": trigger_value}
+        }]
+    else:
+        return jsonify({'error': f'Invalid trigger type:{trigger_type}'}), 400
+    
+    if action_type == "talk-about":
+        agent_action = [{"type": "talk-about", "value": {"about": action_value}}]
+    elif action_type == "say-exact-message":
+        agent_action = [{"type": "say-exact-message", "value": {"message": action_value}}]
+    elif action_type == "collect-value":
+        agent_action = [{
+            "type": "collect-value",
+            "value": [{
+                "field_name": {"value": action_value},
+                "field_type": {"value": "control_textarea"}
+            }]
+        }]
+    elif action_type == "always-include":
+        agent_action = [{"type": "always-include", "value": {"include": action_value}}]
+    elif action_type == "always-talk-about":
+        agent_action = [{"type": "always-talk-about", "value": {"about": action_value}}]
+    elif action_type == "fill-form":
+        agent_action = [{"type": "fill-form", "value": {"form": action_value}}]
+    elif action_type == "show-button":
+        # action_value is now a dict: { text: "...", url: "..." }
+        text = action_value.get("text", "")
+        url  = action_value.get("url", "")
+        agent_action = [{
+            "type": "show-button",
+            "value": {
+                "button": "redirect-url",
+                "text": text,
+                "url": url
+            }
+        }]
+    elif action_type == "send-email":
+        # expect action_value to be a dict with keys:
+        #   subject, content, senderName, replyTo, recipient
+        props = action_value
+        agent_action = [{
+            "type": "send-email",
+            "value": {
+                "emailProperties": {
+                    # minimal fields; you can extend this with Jotform defaults if needed
+                    "subject":  props.get("subject", ""),
+                    "content":  props.get("content", ""),
+                    "from":     props.get("senderName", ""),
+                    "replyTo":  [{"value": props.get("replyTo",""), "text": props.get("replyTo",""), "isValid": True}],
+                    "to":       [{"text": props.get("recipient",""), "isValid": True}],
+                    # leave other emailProperties at their defaults (Jotform will fill them)
+                }
+            }
+        }]
+    elif action_type == "send-api-request":
+        props    = action_value or {}
+        endpoint = props.get("endpoint", "")
+        method   = props.get("method", "GET").upper()
+        agent_action = [{
+            "type": "send-api-request",
+            "value": {
+                "endpoint": endpoint,
+                "method":   method
+            }
+        }]
+    elif action_type == "search-in-website":
+        props      = action_value or {}
+        website    = props.get("website", "")
+        searchfor  = props.get("searchfor", "")
+
+        agent_action = [{
+            "type": "search-in-website",
+            "value": {
+                "website":   website,
+                "searchfor": searchfor
+            }
+        }]
+    elif action_type == "show-video":
+        # props comes in as { platform: "...", url: "..." }
+        props    = action_value or {}
+        platform = props.get("platform", "")
+        url      = props.get("url", "")
+
+        agent_action = [{
+            "type": "show-video",
+            "value": {
+                "platform": platform,
+                "rule":     url
+            }
+        }]
+    elif action_type == "use-knowledge-base":
+        props      = request.json.get('action_value', {}) or {}
+        knowledge  = props.get('knowledge', '')
+        # if they passed an object, stringify it
+        if isinstance(knowledge, dict):
+            knowledge = json.dumps(knowledge)
+
+        agent_action = [{
+            "type": "use-knowledge-base",
+            "value": {
+                "knowledge": knowledge
+            }
+        }]
+    elif action_type == "show-screen-share-button":
+        # No inputs needed—just send an empty value object
+        agent_action = [{
+            "type": "show-screen-share-button",
+            "value": {}
+        }]
+    else:
+        return jsonify({'error': 'Invalid action type'}), 400
+    return agent_trigger, agent_action
+
+@app.route('/batch_update', methods=['POST'])
+def batch_update():
+    try:
+        payload    = request.get_json()
+        agent_id   = payload.get('agent_id')
+        ops        = payload.get('operations', [])
+        if not agent_id or not ops:
+            return jsonify({'error': 'Need agent_id and a non-empty operations list'}), 400
+
+        results = []
+        for op in ops:
+            typ = op.get('type')
+            try:
+                if typ == 'knowledge':
+                    # op: { type:'knowledge', title?:string, data:string }
+                    title  = op.get('title', 'Knowledge')
+                    data   = op['data']
+                    res    = client.add_knowledge(agent_id, title, data)
+                elif typ == 'action':
+                    # op: { type:'action', trigger_type, trigger_value, action_type, action_value }
+                    # **reuse** the same logic you have in your add_action view
+                    causes, tasks = build_causes_and_tasks(
+                        op['trigger_type'],
+                        op['trigger_value'],
+                        op['action_type'],
+                        op['action_value']
+                    )
+                    # you may choose a fixed link/status/order/channels or carry them in op
+                    res = client.add_action(
+                        agent_id,
+                        link    = 'ANY',
+                        status  = 'ACTIVE',
+                        action_type = "BASIC",
+                        order   = 2,
+                        causes  = causes,
+                        tasks   = tasks,
+                        channels= ["all", "standalone", "chatbot", "phone", "voice", "messenger", "sms", "whatsapp"]
+                    )
+                elif typ == 'update_persona':
+                    # op: { type:'update_persona', update_prop?, update_value?, name?, role?, guideline? }
+                    if op.get('name'):
+                        res = client.update_property(agent_id, 'name', op['name'], 'agent')
+                    elif op.get('role'):
+                        res = client.update_property(agent_id, 'role', op['role'], 'agent')
+                    elif op.get('guideline'):
+                        res = client.add_chat_guideline(agent_id, op['guideline'])
+                    else:
+                        res = client.update_property(
+                            agent_id,
+                            op['update_prop'],
+                            op['update_value'],
+                            'agent'
+                        )
+                else:
+                    raise ValueError(f"Unknown operation type: {typ}")
+                results.append({'operation': op, 'result': res})
+            except Exception as e:
+                results.append({'operation': op, 'error': str(e)})
+        return jsonify({'batch_results': results})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/')
 def serve_ui():

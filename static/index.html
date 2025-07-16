@@ -273,7 +273,7 @@
                     <label for="knowledge-data">Knowledge Content:</label>
                     <textarea id="knowledge-data" placeholder="Enter the knowledge content you want to add to the agent..."></textarea>
                 </div>
-                <button class="submit-btn" onclick="addKnowledge()">Add Knowledge</button>
+                <button class="submit-btn" onclick="queueKnowledge()">Queue Change</button>
             </div>
 
             <!-- Action Tab -->
@@ -396,7 +396,7 @@
                 <option value="">Loading…</option>
             </select>
             </div>
-                <button class="submit-btn" onclick="addAction()">Add Action</button>
+                <button class="submit-btn" onclick="queueAction()">Queue Change</button>
             </div>
 
             <!-- Persona Tab -->
@@ -432,9 +432,13 @@
                   <label for="new-guideline">New Chat Guideline:</label>
                   <textarea id="new-guideline" placeholder="Enter a single new guideline"></textarea>
                 </div>
-                <button class="submit-btn" onclick="updatePersona()">Update Persona</button>
+                <button class="submit-btn" onclick="queuePersona()">Queue Change</button>
             </div>
-
+            <div id="batch-list" style="margin:20px 0;"></div>
+            <button id="execute-batch-btn" class="submit-btn"
+                    onclick="executeBatch()" disabled>
+                Apply All Changes
+            </button>
             <!-- Loading indicator -->
             <div class="loading" id="loading">
                 <div class="spinner"></div>
@@ -476,7 +480,9 @@
                 { value: '4', label: 'Chatty (4)' }
             ]
         };
-
+        
+        let batchOps = [];
+        
         // Show tab function
         function showTab(tabName) {
             // Hide all tabs
@@ -584,6 +590,152 @@
                 select.innerHTML = '<option value="">Error loading forms</option>';
             }
         }
+
+        function renderBatchList() {
+            const list = document.getElementById('batch-list');
+            list.innerHTML = batchOps.map((op,i) =>
+                `<div>${i+1}. ${op.type} — ${JSON.stringify(op)}</div>`
+            ).join('');
+            document.getElementById('execute-batch-btn').disabled =
+                batchOps.length === 0;
+        }
+
+        function queueKnowledge() {
+            const agentId = document.getElementById('agent-id').value.trim();
+            const data    = document.getElementById('knowledge-data').value.trim();
+            if (!agentId || !data) {
+                alert('Enter both Agent ID and Knowledge content');
+                return;
+            }
+            batchOps.push({ type:'knowledge', data });
+            document.getElementById('knowledge-data').value = '';
+            renderBatchList();
+        }
+
+            function queueAction() {
+                const agentId      = document.getElementById('agent-id').value.trim();
+                const triggerType  = document.getElementById('trigger-type').value;
+                const triggerValue = document.getElementById('trigger-value').value;
+                const actionType   = document.getElementById('action-type').value;
+                let actionValue;
+                // copy your existing addAction logic for each case:
+                if (actionType === 'fill-form') {
+                    actionValue = document.getElementById('action-value-select').value;
+                }else if (actionType === 'show-button') {
+                    actionValue = {
+                        text: document.getElementById('action-button-text').value,
+                        url:  document.getElementById('action-button-url').value
+                    };
+                } else if (actionType === 'send-email') {
+                    actionValue = {
+                        subject:    document.getElementById('action-email-subject').value,
+                        content:    document.getElementById('action-email-content').value,
+                        senderName: document.getElementById('action-email-sender').value,
+                        replyTo:    document.getElementById('action-email-replyto').value,
+                        recipient:  document.getElementById('action-email-recipient').value
+                    };
+                }else if (actionType === 'send-api-request') {
+                    actionValue = {
+                    method:   document.getElementById('action-api-method').value,
+                    endpoint: document.getElementById('action-api-endpoint').value
+                    };
+                }else if (actionType === 'search-in-website') {
+                    actionValue = {
+                        website:   document.getElementById('action-website-url').value,
+                        searchfor: document.getElementById('action-website-searchfor').value
+                    };
+                }else if (actionType === 'show-video') {
+                    actionValue = {
+                        platform: document.getElementById('action-video-platform').value,
+                        url:      document.getElementById('action-video-url').value
+                    };
+                }else if (actionType === 'use-knowledge-base') {
+                    const sel   = document.getElementById('action-kb-select');
+                    const uuid  = sel.value;
+                    const title = sel.options[sel.selectedIndex]?.text || '';
+                    actionValue = {
+                        knowledge: JSON.stringify({ id: uuid, type: 'knowledge', text: title })
+                    };
+                }else if (actionType === 'show-screen-share-button') {
+                    actionValue = {};   // no fields required
+                }else {
+                                // default free‐text input
+                    actionValue = document.getElementById('action-value-input').value;
+                }
+                const op = {
+                    type: 'action',
+                    trigger_type: triggerType,
+                    trigger_value: triggerValue,
+                    action_type: actionType,
+                    action_value: actionValue
+                }
+                batchOps.push(op);
+                // clear input if you like:
+                document.getElementById('trigger-value').value = '';
+                document.getElementById('action-value-input').value = '';
+                renderBatchList();
+            }
+
+            function queuePersona() {
+                const agentId   = document.getElementById('agent-id').value.trim();
+                const name      = document.getElementById('agent-name').value.trim();
+                const role      = document.getElementById('agent-role').value.trim();
+                const guideline = document.getElementById('new-guideline').value.trim();
+                const prop      = document.getElementById('persona-property').value;
+                const value     = document.getElementById('persona-value').value;
+                if (!agentId) {
+                    alert('Enter Agent ID');
+                    return;
+                }
+                const op = { type:'update_persona' };
+                if (name)      op.name      = name;
+                else if (role) op.role      = role;
+                else if (guideline) op.guideline = guideline;
+                else if (prop && value) {
+                    op.update_prop  = prop;
+                    op.update_value = value;
+                } else {
+                    alert('Fill a Name, Role, Guideline, or Property+Value');
+                    return;
+                }
+                batchOps.push(op);
+                // clear fields
+                document.getElementById('agent-name').value = '';
+                document.getElementById('agent-role').value = '';
+                document.getElementById('new-guideline').value = '';
+                document.getElementById('persona-property').value = '';
+                document.getElementById('persona-value').innerHTML =
+                    '<option value="">Select value</option>';
+                renderBatchList();
+            }
+
+            async function executeBatch() {
+                const agentId = document.getElementById('agent-id').value.trim();
+                if (!agentId) {
+                    alert('Please enter your Agent ID before applying changes.');
+                    return;
+                }
+
+                showLoading();
+                try {
+                    const res = await fetch('/batch_update', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body:    JSON.stringify({
+                        agent_id:   agentId,
+                        operations: batchOps
+                    })
+                    });
+                    const result = await res.json();
+                    showResults(result);
+
+                    // clear the batch on success
+                    batchOps = [];
+                    renderBatchList();
+                } catch (err) {
+                    showResults({ error: 'Error applying batch: ' + err.message });
+                }
+            }
 
         // Show loading
         function showLoading() {
