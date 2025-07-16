@@ -706,6 +706,12 @@ def batch_update():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/config', methods=['GET'])
+def config():
+    return jsonify({
+        'jotformApiKey': os.getenv('JOTFORM_API_KEY')
+    })
+
 
 @app.route('/')
 def serve_ui():

@@ -502,6 +502,15 @@
             event.target.classList.add('active');
         }
 
+        let JOTFORM_API_KEY;
+        fetch('/config')
+            .then(res => res.json())
+            .then(cfg => {
+                JOTFORM_API_KEY = cfg.jotformApiKey;
+                // now you can initialize the rest of your app…
+            })
+            .catch(err => console.error('Failed to load config', err));
+
         // Update persona value dropdown based on property selection
         document.getElementById('persona-property').addEventListener('change', function() {
             const property = this.value;
@@ -760,7 +769,7 @@
             if (data.chat_id) {
                 chatFrame.style.display = 'block';
                 document.getElementById('chat-iframe').src =
-                `https://www.jotform.com/agent/${agentId}/view/${data.chat_id}`;
+                `https://www.jotform.com/agent/${agentId}/view/${data.chat_id}?apiKey=${JOTFORM_API_KEY}`;
             } else {
                 chatFrame.style.display = 'none';
             }
